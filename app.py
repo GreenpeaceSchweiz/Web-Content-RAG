@@ -1,14 +1,11 @@
 import streamlit as st
 import psycopg2
-from google import genai
 from google.genai import types
+from gemini_client import get_genai_client
 
 # 1. Config optimized for your research
 MAX_SOURCES = 100         
 SIMILARITY_CUTOFF = 0.85 
-
-# Add your Gemini API key here
-client = genai.Client(api_key="")
 
 # Cache the database connection so it doesn't reconnect on every click
 @st.cache_resource
@@ -17,6 +14,7 @@ def get_db_connection():
 
 # MODIFIED: Added target_language parameter
 def ask_hybrid_rag(user_query, target_language):
+    client = get_genai_client()
     conn = get_db_connection()
     cur = conn.cursor()
     
@@ -93,15 +91,37 @@ def ask_hybrid_rag(user_query, target_language):
 # --- STREAMLIT UI LAYOUT ---
 st.set_page_config(page_title="Greenpeace.ch Archive Assistant", page_icon="🕵️", layout="centered")
 
+# --- STEP 1: GOOGLE AUTHENTICATION & DOMAIN LOCK ---
+if not st.user.is_logged_in:
+    st.title("🔒 Greenpeace Archive Assistant")
+    st.write("Please sign in with your Greenpeace account to proceed.")
+    if st.button("Log in with Google"):
+        st.login("google")
+    st.stop()
+
+# Strict domain lock check
+user_email = st.user.email
+if not user_email.endswith("@greenpeace.org"):
+    st.error(f"Access denied. The account '{user_email}' does not have the needed permissions.")
+    if st.button("Log out"):
+        st.logout()
+    st.stop()
+
+# (Optional UI element in your sidebar to show who is logged in)
+st.sidebar.write(f"Logged in as: **{st.user.name}**")
+if st.sidebar.button("Log out"):
+    st.logout()
+
+
 # ADDED: Sidebar Layout for Settings & Language Selection
 st.sidebar.title("⚙️ Setup")
 lang_options = {
-    "Deutsch": "German",
     "English": "English",
+    "Deutsch": "German",
     "Français": "French",
     "Italiano": "Italian"
 }
-selected_lang_ui = st.sidebar.selectbox("Output Language / Antwortsprache:", list(lang_options.keys()))
+selected_lang_ui = st.sidebar.selectbox("Output Language:", list(lang_options.keys()))
 target_language = lang_options[selected_lang_ui]
 
 st.title("🌱 Greenpeace Archive Assistant")
