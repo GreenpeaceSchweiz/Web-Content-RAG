@@ -9,7 +9,6 @@ from gemini_client import get_genai_client
 MAX_SOURCES = 100         
 SIMILARITY_CUTOFF = 0.85 
 
-
 def _escape_markdown(text):
     return (
         str(text)
@@ -56,7 +55,7 @@ def get_db_connection():
         )
     return psycopg2.connect(database_url)
 
-# MODIFIED: Added target_language parameter
+# Main function to handle the RAG process
 def ask_hybrid_rag(user_query, target_language):
     client = get_genai_client()
     conn = get_db_connection()
@@ -102,27 +101,27 @@ def ask_hybrid_rag(user_query, target_language):
 
     context_text = "\n".join(context_chunks)
     
-    # C. System Instructions (MODIFIED: Injected language rule seamlessly)
+    # C. System Instructions
     system_instruction = f"""
-    Du bist ein präziser Greenpeace-Historiker und Archivar. 
-    Dir wird ein Kontext aus unstrukturierten Textabschnitten zur Verfügung gestellt.
-    Deine Aufgabe ist es, die Frage des Benutzers basierend auf diesem Kontext detailgetreu zu beantworten.
+    You are a meticulous Greenpeace historian and archivist. 
+    You are provided with a context consisting of unstructured text passages.
+    Your task is to answer the user's question in detail based on this context.
     
-    WICHTIGE REGEL FÜR DIE SPRACHE:
-    - Du MUSST die Antwort vollständig in folgender Sprache verfassen: {target_language}.
-    - Falls die Quelltexte oder die Frage in einer anderen Sprache sind, übersetze die Fakten akkurat direkt in diese Zielsprache ({target_language}).
+    IMPORTANT LANGUAGE RULES:
+    - You MUST write the answer entirely in the following language: {target_language}.
+    - If the source texts or the question are in another language, translate the facts accurately directly into this target language ({target_language}).
     
-    WICHTIG FÜR DIE HISTORISCHE RECHERCHE:
-    - Achte besonders auf spezifische Eigennamen, Städte (z.B. Liestal), Firmennamen oder Jahreszahlen.
-    - Manchmal ist die gesuchte Verbindung klein (z.B. nur eine beiläufige Erwähnung im Satz). Ignoriere diese Details nicht!
-    - Wenn der Kontext irrelevantes Rauschen enthält, filtere es eigenständig heraus.
-    - Falls die Anfrage keine konkrete Anweisung zum Zeitraum enthält, gewichte aktuellere Inhalte höher als ältere.
-    - Wenn die gesuchten Fakten im Text vorkommen, beantworte die Frage präzise.
-    - Zitiere immer die URLs der Quellen, die du für die Aussagen benutzt. Sowohl am Ende der Antwort für allgemeine Quellen als auch direkt in der Antwort, um jede einzelne Aussage zu belegen.
-    - Falls die Antwort im Kontext nicht zu finden ist, antworte, dass die Frage aufgrund des Archivs nicht beantwortet werden kann.
+    IMPORTANT FOR YOUR RESEARCH:
+    - Pay special attention to specific proper nouns, cities (e.g., Liestal), company names, or dates.
+    - Sometimes the connection you're looking for is subtle (e.g., just a casual mention in a sentence). Don't ignore these details!
+    - If the context contains irrelevant noise, filter it out on your own.
+    - If the query does not specify a time period, prioritize more recent content over older content.
+    - If the facts you are looking for appear in the text, answer the question precisely.
+    - Always cite the URLs of the sources you use for your statements. Include them both at the end of the answer for general sources and directly within the answer to substantiate each individual statement.
+    - If the answer cannot be found in the context, respond that the question cannot be answered due to the archive.
     """
     
-    main_prompt = f"KONTEXT:\n{context_text}\n\nFRAGE: {user_query}"
+    main_prompt = f"CONTEXT:\n{context_text}\n\nQUESTION: {user_query}"
     
     # D. Generation
     response = client.models.generate_content(
@@ -155,13 +154,13 @@ if not user_email.endswith("@greenpeace.org"):
         st.logout()
     st.stop()
 
-# (Optional UI element in your sidebar to show who is logged in)
+# UI element in the sidebar to show logged in user and allow logout
 st.sidebar.write(f"Logged in as: **{st.user.name}**")
 if st.sidebar.button("Log out"):
     st.logout()
 
 
-# ADDED: Sidebar Layout for Settings & Language Selection
+# Sidebar Layout for Settings & Language Selection
 st.sidebar.title("⚙️ Setup")
 lang_options = {
     "English": "English",
