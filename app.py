@@ -1,12 +1,43 @@
 import streamlit as st
 import os
 import psycopg2
+from urllib.parse import urlparse
 from google.genai import types
 from gemini_client import get_genai_client
 
 # 1. Config optimized for your research
 MAX_SOURCES = 100         
 SIMILARITY_CUTOFF = 0.85 
+
+
+def _escape_markdown(text):
+    return (
+        str(text)
+        .replace("\\", "\\\\")
+        .replace("`", "\\`")
+        .replace("*", "\\*")
+        .replace("_", "\\_")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
+        .replace("#", "\\#")
+        .replace("+", "\\+")
+        .replace("-", "\\-")
+        .replace(".", "\\.")
+        .replace("!", "\\!")
+    )
+
+
+def _safe_source_url(url):
+    parsed = urlparse(str(url))
+    if parsed.scheme not in {"http", "https"}:
+        return None
+    if not parsed.netloc:
+        return None
+    return str(url)
 
 def _load_database_url():
     return (
@@ -62,8 +93,12 @@ def ask_hybrid_rag(user_query, target_language):
     source_list = []
     for title, url, chunk, distance in db_results:
         context_chunks.append(f"Source: {title} ({url})\nDistance Score: {distance:.3f}\nContent: {chunk}\n---")
-        # Format as Markdown clickable links for the UI
-        source_list.append(f"- [{title}]({url})")
+        safe_url = _safe_source_url(url)
+        safe_title = _escape_markdown(title)
+        if safe_url:
+            source_list.append((safe_title, safe_url))
+        else:
+            source_list.append((safe_title, None))
 
     context_text = "\n".join(context_chunks)
     
@@ -157,8 +192,11 @@ if user_query:
             
             # Collapsible menu for the research links
             with st.expander(f"📚 Show used sources ({len(source_urls)})"):
-                for source in source_urls:
-                    st.markdown(source)
+                for title, url in source_urls:
+                    if url:
+                        st.markdown(f"- [{title}]({url})")
+                    else:
+                        st.markdown(f"- {title}")
                     
         except Exception as e:
-            st.error(f"Oops, an error occurred: {e}")
+            st.error("Oops, an error occurred while processing your request.")
