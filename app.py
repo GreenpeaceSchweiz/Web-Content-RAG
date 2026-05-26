@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 import psycopg2
 from google.genai import types
 from gemini_client import get_genai_client
@@ -7,10 +8,22 @@ from gemini_client import get_genai_client
 MAX_SOURCES = 100         
 SIMILARITY_CUTOFF = 0.85 
 
+def _load_database_url():
+    return (
+        os.getenv("DATABASE_URL")
+        or st.secrets.get("DATABASE_URL")
+        or st.secrets.get("database", {}).get("DATABASE_URL")
+    )
+
 # Cache the database connection so it doesn't reconnect on every click
 @st.cache_resource
 def get_db_connection():
-    return psycopg2.connect("host=localhost dbname=postgres user=postgres password=mysecretpassword")
+    database_url = _load_database_url()
+    if not database_url:
+        raise RuntimeError(
+            "Missing DATABASE_URL. Set it as an environment variable or in .streamlit/secrets.toml."
+        )
+    return psycopg2.connect(database_url)
 
 # MODIFIED: Added target_language parameter
 def ask_hybrid_rag(user_query, target_language):
@@ -124,7 +137,7 @@ lang_options = {
 selected_lang_ui = st.sidebar.selectbox("Output Language:", list(lang_options.keys()))
 target_language = lang_options[selected_lang_ui]
 
-st.title("🌱 Greenpeace Archive Assistant")
+st.title("🌱 Greenpeace.ch Archive Assistant")
 st.write("Use AI to search through more than 8,000 articles and press releases from greenpeace.ch")
 
 # User Input Entry
