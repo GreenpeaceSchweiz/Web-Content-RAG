@@ -1,4 +1,4 @@
-# llm-db
+# Web-Content-RAG
 
 Greenpeace archive search using a PostgreSQL + pgvector knowledge base, Gemini embeddings, and a Streamlit RAG app.
 
