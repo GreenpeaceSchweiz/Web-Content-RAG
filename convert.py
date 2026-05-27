@@ -1,3 +1,9 @@
+"""
+WordPress to Vector DB Converter
+This script reads a WordPress export CSV, generates embeddings for the content using Gemini's embedding model, 
+and stores the results in a PostgreSQL database for later retrieval.
+"""
+
 import pandas as pd
 import psycopg2
 from google.genai import types

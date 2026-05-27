@@ -1,3 +1,8 @@
+"""
+Greenpeace.ch Archive Assistant
+This Streamlit app allows Greenpeace researchers to ask questions about the content of the greenpeace.ch website
+"""
+
 import streamlit as st
 import os
 import psycopg2
